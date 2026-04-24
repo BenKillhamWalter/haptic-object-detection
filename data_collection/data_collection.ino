@@ -1,4 +1,4 @@
-/* EDIT EDIT
+/*
  * ================================================================
  *  PROSTHETIC HAND — DATA COLLECTION FIRMWARE
  *  File: data_collection.ino
