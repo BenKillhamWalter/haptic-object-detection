@@ -10,15 +10,16 @@
  *  Hardware layout:
  *    OpenRB-150 (SAMD21, 32KB SRAM, 256KB Flash)
  *    Dynamixel XM430-W350-R (ID 1, Protocol 2.0)
- *      open  = 33.0 deg
- *      close = 90.0 deg
+ *      open  = 60.0 deg
+ *      close = 115.0 deg
  *    TCA9548A I2C multiplexer at 0x70
- *      Channel 0 - Strip 1 (Index + Thumb fingers)
+ *      Channel 0 - Index finger strip
  *        Sensor 0  Index  ID1  begin(0,0)  -> A1=0,A0=0
  *        Sensor 1  Index  ID2  begin(0,1)  -> A1=0,A0=1
- *        Sensor 2  Thumb  ID3  begin(1,0)  -> A1=1,A0=0
- *        Sensor 3  Thumb  ID4  begin(1,1)  -> A1=1,A0=1
- *      Channel 1 - Strip 2 (Middle finger)
+ *      Channel 1 - Thumb finger strip
+ *        Sensor 2  Thumb  ID1  begin(0,0)  -> A1=0,A0=0
+ *        Sensor 3  Thumb  ID2  begin(0,1)  -> A1=0,A0=1
+ *      Channel 2 - Middle finger strip
  *        Sensor 4  Middle ID1  begin(0,0)  -> A1=0,A0=0
  *        Sensor 5  Middle ID2  begin(0,1)  -> A1=0,A0=1
  *
@@ -72,9 +73,35 @@ const uint32_t GRASP_TIMEOUT_MS   = 5000;  // Max time waiting for steady grasp
 const uint32_t HOLD_DURATION_MS   = 800;   // Hold after steady detection before final t2 capture
 
 // Contact detection for t1
-// Start with empty grasps, find the typical max noise in the CSV,
-// then set this to roughly 3-5 times that noise floor.
-const float CONTACT_THRESHOLD = 0.0f;
+// Per-axis thresholds [sensor][axis: 0=dx, 1=dy, 2=dz].
+// Set each value to ~1.5x the peak absolute noise for that axis from
+// an empty-grasp CSV run. Values below are starting points derived
+// from the 2026-05-05 empty-grasp data; re-tune after any hardware change.
+const float CONTACT_THRESHOLDS[6][3] = {
+  {45.0f,  45.0f, 160.0f},  // s0 Index ID1:  dx, dy, dz
+  {30.0f,  40.0f, 125.0f},  // s1 Index ID2
+  {45.0f,  40.0f,  80.0f},  // s2 Thumb ID1
+  {55.0f,  65.0f,  75.0f},  // s3 Thumb ID2
+  {45.0f,  70.0f,  80.0f},  // s4 Middle ID1
+  {35.0f,  35.0f,  90.0f}   // s5 Middle ID2
+};
+
+// Axis enable mask for contact DETECTION only.
+// false = axis too noisy to use for t1 triggering.
+// All 18 channels are still logged and passed to the classifier.
+const bool CONTACT_ENABLED[6][3] = {
+  {false, true,  true },  // s0: dy, dz
+  {false, false, true },  // s1: dz only
+  {true,  false, false},  // s2: dx only
+  {true,  true,  true },  // s3: dx, dy, dz
+  {true,  true,  true },  // s4: dx, dy, dz
+  {false, true,  true }   // s5: dy, dz
+};
+
+// Startup ignore: skip the first N ms to avoid power-on spikes.
+const uint32_t CONTACT_IGNORE_MS      = 150;
+// Require this many consecutive samples above threshold before confirming t1.
+const int      CONTACT_CONFIRM_SAMPLES = 3;
 
 // Steady-state detection before final t2 capture
 const float   ENCODER_STILL_DEG   = 0.5f;
@@ -97,17 +124,24 @@ const int BASELINE_SAMPLES = 40;
 #define MOTOR_ID      1
 #define NUM_SENSORS   6
 
+// TCA9548A channel assignments - FIXED to match physical wiring
+#define TCA_CH_INDEX  0   // Index finger strip  (sensors 0, 1)
+#define TCA_CH_THUMB  1   // Thumb finger strip   (sensors 2, 3)
+#define TCA_CH_MIDDLE 2   // Middle finger strip  (sensors 4, 5)
+
 // ==================================================================
 // SENSOR OBJECTS
 // ==================================================================
 
-// Strip 1, TCA channel 0
+// TCA channel 0 - Index finger
 MLX90393 mlx_idx1;  // Sensor 0: Index  ID1  begin(0,0)
 MLX90393 mlx_idx2;  // Sensor 1: Index  ID2  begin(0,1)
-MLX90393 mlx_thb1;  // Sensor 2: Thumb  ID3  begin(1,0)
-MLX90393 mlx_thb2;  // Sensor 3: Thumb  ID4  begin(1,1)
 
-// Strip 2, TCA channel 1
+// TCA channel 1 - Thumb finger
+MLX90393 mlx_thb1;  // Sensor 2: Thumb  ID1  begin(0,0)
+MLX90393 mlx_thb2;  // Sensor 3: Thumb  ID2  begin(0,1)
+
+// TCA channel 2 - Middle finger
 MLX90393 mlx_mid1;  // Sensor 4: Middle ID1  begin(0,0)
 MLX90393 mlx_mid2;  // Sensor 5: Middle ID2  begin(0,1)
 
@@ -120,6 +154,15 @@ float baseline[NUM_SENSORS][3];
 
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 using namespace ControlTableItem;
+
+// ==================================================================
+// CONTACT DETECTION STATE
+// Reset by resetContactDetection() at the start of each grasp.
+// ==================================================================
+
+int  contactCounter[NUM_SENSORS][3];  // consecutive samples above threshold
+bool axisContact[NUM_SENSORS][3];     // true once axis has confirmed contact
+bool sensorContact[NUM_SENSORS];      // true once any axis of sensor confirmed
 
 // ==================================================================
 // STATE
@@ -224,6 +267,8 @@ bool isValidLabel(const String &label) {
 void runGrasp() {
   DEBUG_SERIAL.println(F("# Grasp start."));
 
+  resetContactDetection();
+
   bool t1_detected = false;
   bool t2_captured = false;
   bool stable_detected = false;
@@ -263,9 +308,9 @@ void runGrasp() {
     bool t1_flag_this_sample = false;
     bool t2_flag_this_sample = false;
 
-    // t1 = first meaningful contact.
+    // t1 = first meaningful contact (stable, per-axis detection).
     if (!t1_detected) {
-      int contact_sensor = detectContactSensor(dx, dy, dz);
+      int contact_sensor = updateStableContactDetection(dx, dy, dz, ts);
       if (contact_sensor >= 0) {
         t1_detected = true;
         t1_flag_this_sample = true;
@@ -323,15 +368,55 @@ void runGrasp() {
   }
 }
 
-int detectContactSensor(float dx[], float dy[], float dz[]) {
+// ------------------------------------------------------------------
+// resetContactDetection() - call once at the start of each grasp.
+// ------------------------------------------------------------------
+void resetContactDetection() {
   for (int i = 0; i < NUM_SENSORS; i++) {
-    if (fabs(dx[i]) > CONTACT_THRESHOLD ||
-        fabs(dy[i]) > CONTACT_THRESHOLD ||
-        fabs(dz[i]) > CONTACT_THRESHOLD) {
-      return i;
+    sensorContact[i] = false;
+    for (int j = 0; j < 3; j++) {
+      axisContact[i][j]    = false;
+      contactCounter[i][j] = 0;
     }
   }
-  return -1;
+}
+
+// ------------------------------------------------------------------
+// updateStableContactDetection()
+// Call every sample. Returns index of the first newly-confirmed sensor,
+// or -1 if no new confirmation this sample.
+// graspElapsedMs = millis() - grasp_start (ts variable in runGrasp).
+// ------------------------------------------------------------------
+int updateStableContactDetection(float dx[], float dy[], float dz[], uint32_t graspElapsedMs) {
+  if (graspElapsedMs < CONTACT_IGNORE_MS) return -1;
+
+  float vals[3];
+  int firstNew = -1;
+
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    vals[0] = dx[i];
+    vals[1] = dy[i];
+    vals[2] = dz[i];
+
+    for (int j = 0; j < 3; j++) {
+      if (!CONTACT_ENABLED[i][j]) continue;
+      if (axisContact[i][j])      continue;  // already confirmed
+
+      if (fabs(vals[j]) >= CONTACT_THRESHOLDS[i][j]) {
+        contactCounter[i][j]++;
+        if (contactCounter[i][j] >= CONTACT_CONFIRM_SAMPLES) {
+          axisContact[i][j]  = true;
+          if (!sensorContact[i]) {
+            sensorContact[i] = true;
+            if (firstNew < 0) firstNew = i;
+          }
+        }
+      } else {
+        contactCounter[i][j] = 0;  // must be consecutive
+      }
+    }
+  }
+  return firstNew;
 }
 
 // ==================================================================
@@ -348,15 +433,20 @@ void tcaselect(uint8_t ch) {
 void initSensors() {
   DEBUG_SERIAL.println(F("# Initialising sensors..."));
 
-  tcaselect(0);
+  // Channel 0 - Index finger
+  tcaselect(TCA_CH_INDEX);
   mlx_idx1.begin(0, 0); mlx_idx1.setOverSampling(0); mlx_idx1.setDigitalFiltering(0);
   mlx_idx2.begin(0, 1); mlx_idx2.setOverSampling(0); mlx_idx2.setDigitalFiltering(0);
+
+  // Channel 1 - Thumb finger
+  tcaselect(TCA_CH_THUMB);
   mlx_thb1.begin(1, 0); mlx_thb1.setOverSampling(0); mlx_thb1.setDigitalFiltering(0);
   mlx_thb2.begin(1, 1); mlx_thb2.setOverSampling(0); mlx_thb2.setDigitalFiltering(0);
 
-  tcaselect(1);
-  mlx_mid1.begin(0, 0); mlx_mid1.setOverSampling(0); mlx_mid1.setDigitalFiltering(0);
-  mlx_mid2.begin(0, 1); mlx_mid2.setOverSampling(0); mlx_mid2.setDigitalFiltering(0);
+  // Channel 2 - Middle finger
+  tcaselect(TCA_CH_MIDDLE);
+  mlx_mid1.begin(1, 0); mlx_mid1.setOverSampling(0); mlx_mid1.setDigitalFiltering(0);
+  mlx_mid2.begin(1, 1); mlx_mid2.setOverSampling(0); mlx_mid2.setDigitalFiltering(0);
 
   delay(100);
   DEBUG_SERIAL.println(F("# Sensors OK."));
@@ -369,13 +459,18 @@ void calibrateBaseline() {
   float sumZ[NUM_SENSORS] = {0};
 
   for (int s = 0; s < BASELINE_SAMPLES; s++) {
-    tcaselect(0);
+    // Channel 0 - Index finger (sensors 0, 1)
+    tcaselect(TCA_CH_INDEX);
     mlx_idx1.readData(data); sumX[0] += data.x; sumY[0] += data.y; sumZ[0] += data.z;
     mlx_idx2.readData(data); sumX[1] += data.x; sumY[1] += data.y; sumZ[1] += data.z;
+
+    // Channel 1 - Thumb finger (sensors 2, 3)
+    tcaselect(TCA_CH_THUMB);
     mlx_thb1.readData(data); sumX[2] += data.x; sumY[2] += data.y; sumZ[2] += data.z;
     mlx_thb2.readData(data); sumX[3] += data.x; sumY[3] += data.y; sumZ[3] += data.z;
 
-    tcaselect(1);
+    // Channel 2 - Middle finger (sensors 4, 5)
+    tcaselect(TCA_CH_MIDDLE);
     mlx_mid1.readData(data); sumX[4] += data.x; sumY[4] += data.y; sumZ[4] += data.z;
     mlx_mid2.readData(data); sumX[5] += data.x; sumY[5] += data.y; sumZ[5] += data.z;
 
@@ -398,13 +493,18 @@ void calibrateBaseline() {
 }
 
 void readAllSensors(float dx[], float dy[], float dz[]) {
-  tcaselect(0);
+  // Channel 0 - Index finger (sensors 0, 1)
+  tcaselect(TCA_CH_INDEX);
   mlx_idx1.readData(data); dx[0] = data.x - baseline[0][0]; dy[0] = data.y - baseline[0][1]; dz[0] = data.z - baseline[0][2];
   mlx_idx2.readData(data); dx[1] = data.x - baseline[1][0]; dy[1] = data.y - baseline[1][1]; dz[1] = data.z - baseline[1][2];
+
+  // Channel 1 - Thumb finger (sensors 2, 3)
+  tcaselect(TCA_CH_THUMB);
   mlx_thb1.readData(data); dx[2] = data.x - baseline[2][0]; dy[2] = data.y - baseline[2][1]; dz[2] = data.z - baseline[2][2];
   mlx_thb2.readData(data); dx[3] = data.x - baseline[3][0]; dy[3] = data.y - baseline[3][1]; dz[3] = data.z - baseline[3][2];
 
-  tcaselect(1);
+  // Channel 2 - Middle finger (sensors 4, 5)
+  tcaselect(TCA_CH_MIDDLE);
   mlx_mid1.readData(data); dx[4] = data.x - baseline[4][0]; dy[4] = data.y - baseline[4][1]; dz[4] = data.z - baseline[4][2];
   mlx_mid2.readData(data); dx[5] = data.x - baseline[5][0]; dy[5] = data.y - baseline[5][1]; dz[5] = data.z - baseline[5][2];
 }
