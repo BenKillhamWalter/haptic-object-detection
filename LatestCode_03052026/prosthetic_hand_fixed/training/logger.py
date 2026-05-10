@@ -14,9 +14,9 @@ Usage:
     python logger.py --port /dev/ttyACM0
 
 During collection, type one of:
-    cylinder_stiff, cylinder_soft, cube_stiff, cube_soft
+    cube_soft, cube_stiff, cylinder_soft, cylinder_stiff, no_object
 or use shortcuts:
-    1, 2, 3, 4
+    1, 2, 3, 4, 5
 
 Commands:
     q    quit
@@ -37,20 +37,27 @@ import serial
 import serial.tools.list_ports
 
 BAUD_RATE = 115200
-OUTPUT_DIR = "grasp_data"
+
+# Resolve grasp_data relative to the script's location, not the user's cwd.
+# This way running `python logger.py` from any directory always writes CSVs
+# into the worktree's training/grasp_data folder beside this script.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_OUTPUT_DIR = os.path.join(SCRIPT_DIR, "grasp_data")
 
 VALID_LABELS = [
-    "cylinder_stiff",
-    "cylinder_soft",
-    "cube_stiff",
     "cube_soft",
+    "cube_stiff",
+    "cylinder_soft",
+    "cylinder_stiff",
+    "no_object",
 ]
 
 LABEL_SHORTCUTS = {
-    "1": "cylinder_stiff",
-    "2": "cylinder_soft",
-    "3": "cube_stiff",
-    "4": "cube_soft",
+    "1": "cube_soft",
+    "2": "cube_stiff",
+    "3": "cylinder_soft",
+    "4": "cylinder_stiff",
+    "5": "no_object",
 }
 
 CSV_HEADER = (
@@ -59,9 +66,9 @@ CSV_HEADER = (
     "s1_dx,s1_dy,s1_dz,"
     "s2_dx,s2_dy,s2_dz,"
     "s3_dx,s3_dy,s3_dz,"
-    "s4_dx,s4_dy,s4_dz,"
-    "s5_dx,s5_dy,s5_dz,"
-    "t1_flag,t2_flag,t1_ms,t2_ms"
+    "t1_flag,t2_flag,t1_ms,t2_ms,"
+    "load_t1,load_t2,current_t1,current_t2,enc_t1,time_to_stall_ms,"
+    "t1_source"
 )
 
 
@@ -138,10 +145,11 @@ class SerialLogger:
 
         if self.row_count % 25 == 0:
             cols = line.split(",")
-            if len(cols) >= 26:
+            # Layout (27 cols): 4 meta + 12 sensor + 4 flags/ms + 6 motor + 1 t1_source
+            if len(cols) >= 27:
                 print(
                     f"  row={self.row_count:5d} grasp={cols[0]} label={cols[1]} "
-                    f"t={cols[2]}ms t1={cols[-4]} t2={cols[-3]}"
+                    f"t={cols[2]}ms t1f={cols[16]} t2f={cols[17]} src={cols[26]}"
                 )
             self._file.flush()
 
@@ -193,14 +201,21 @@ def print_menu() -> None:
     print("\nLabels:")
     for i, label in enumerate(VALID_LABELS, start=1):
         print(f"  {i}. {label}")
-    print("Commands: q=quit, r=recalibrate baseline, h=print CSV header")
+    print("Commands: q=quit, r=motor-field profile sweep (REQUIRED first!), h=print CSV header")
+    print()
+    print("IMPORTANT: At the start of every session (after a power-cycle), send 'r' to")
+    print("calibrate the motor-field profile. The firmware will prompt you to remove")
+    print("all objects, then sweep the motor and record per-encoder-degree baselines.")
+    print("Without this, magnetic detection thresholds will be too low and you'll get")
+    print("false positives during grasps.")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Interactive logger for prosthetic hand data collection")
     parser.add_argument("--port", default=None, help="Serial port, e.g. COM3 or /dev/ttyACM0")
     parser.add_argument("--baud", type=int, default=BAUD_RATE, help="Serial baud rate")
-    parser.add_argument("--outdir", default=OUTPUT_DIR, help="Output directory for CSV files")
+    parser.add_argument("--outdir", default=DEFAULT_OUTPUT_DIR,
+                        help="Output directory for CSV files (default: grasp_data beside this script)")
     parser.add_argument("--startup-wait", type=float, default=4.0, help="Seconds to read startup messages")
     parser.add_argument("--grasp-timeout", type=float, default=15.0, help="Seconds to wait for one grasp to finish")
     args = parser.parse_args()
@@ -236,9 +251,31 @@ def main() -> None:
                     if command in {"q", "quit", "exit"}:
                         break
 
-                    if command in {"r", "h"}:
+                    if command == "h":
                         logger.send_line(command)
                         logger.wait_for_grasp_done(timeout_s=8.0)
+                        continue
+
+                    if command == "r":
+                        # Motor-field profile calibration is a 2-step protocol:
+                        # (1) send 'r', firmware prints REMOVE-OBJECTS prompt and
+                        # waits up to 30s for 'y'. (2) we ask the Python user to
+                        # confirm, then send 'y' to start the ~6 s sweep.
+                        print("\n[CALIBRATION] Sending 'r'. Read the firmware prompt below.")
+                        logger.send_line("r")
+                        logger.read_available(2.0)  # let firmware print + drain its buffer
+                        ans = input(
+                            "[CALIBRATION] No object in the hand? Type 'y' + Enter to begin sweep, "
+                            "anything else to abort: "
+                        ).strip().lower()
+                        if ans == "y":
+                            logger.send_line("y")
+                            print("[CALIBRATION] Sweep in progress (~6 s)...")
+                            logger.wait_for_grasp_done(timeout_s=15.0)
+                        else:
+                            logger.send_line("n")  # any non-y aborts in firmware
+                            logger.wait_for_grasp_done(timeout_s=5.0)
+                            print("[CALIBRATION] Aborted.")
                         continue
 
                     label = normalize_user_input(user_text)
