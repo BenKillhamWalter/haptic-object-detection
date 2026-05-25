@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MARS — ME-21-MALI-009</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg-0:#05070d;
+    --bg-1:#0a0f1a;
+    --bg-2:#0e1525;
+
+    --glass:rgba(255,255,255,0.045);
+    --glass-strong:rgba(255,255,255,0.08);
+    --glass-border:rgba(140,200,255,0.18);
+    --glass-border-strong:rgba(180,220,255,0.35);
+
+    --ink:#e8f1ff;
+    --ink-dim:#8aa3c4;
+    --ink-faint:#5a7090;
+
+    --cyan:#5ee7ff;
+    --cyan-deep:#22b8d9;
+    --cyan-glow:rgba(94,231,255,0.55);
+
+    --magenta:#ff5ec4;
+    --magenta-glow:rgba(255,94,196,0.55);
+
+    --amber:#ffb84a;
+    --amber-glow:rgba(255,184,74,0.55);
+
+    --red:#ff7a7a;
+    --green:#5ddc9a;
+
+    --mono:'JetBrains Mono','SF Mono','Consolas','Courier New',monospace;
+  }
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 12% -10%, rgba(94,231,255,0.10), transparent 60%),
+      radial-gradient(900px 600px at 95% 10%, rgba(255,94,196,0.09), transparent 60%),
+      radial-gradient(900px 700px at 50% 110%, rgba(255,184,74,0.06), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1) 50%, var(--bg-2));
+    color:var(--ink);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    min-height:100vh;
+    padding:18px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    overflow-x:hidden;
+    position:relative;
+  }
+  body::before{
+    content:"";
+    position:fixed;inset:-20%;
+    background:
+      radial-gradient(600px 400px at 20% 30%, rgba(94,231,255,0.07), transparent 60%),
+      radial-gradient(500px 350px at 80% 70%, rgba(255,94,196,0.06), transparent 60%);
+    filter:blur(40px);
+    animation:drift 22s ease-in-out infinite alternate;
+    pointer-events:none;
+    z-index:0;
+  }
+  @keyframes drift{
+    0%   {transform:translate(0,0) scale(1)}
+    100% {transform:translate(40px,-30px) scale(1.08)}
+  }
+  body::after{
+    content:"";
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(rgba(94,231,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(94,231,255,0.035) 1px, transparent 1px);
+    background-size:42px 42px;
+    mask-image:radial-gradient(ellipse at center, black 35%, transparent 80%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .outer{
+    position:relative;z-index:1;width:100%;max-width:1200px;
+    border-radius:18px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(22px) saturate(140%);
+    -webkit-backdrop-filter:blur(22px) saturate(140%);
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow:hidden;
+  }
+  .outer::before{
+    content:"";position:absolute;left:8%;right:8%;top:0;height:1px;
+    background:linear-gradient(90deg, transparent, var(--cyan-glow), transparent);
+    opacity:0.7;
+  }
+
+  /* ── HEADER ── */
+  .hdr{padding:22px 28px 14px;position:relative}
+  .hdr-meta{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:18px;flex-wrap:wrap;gap:20px;
+  }
+  .hdr-code{font-family:var(--mono);color:var(--cyan);font-size:12.5px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;opacity:0.9}
+  .hdr-code .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan-glow);margin-right:8px;vertical-align:middle;animation:blink 2.4s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:0.4}50%{opacity:1}}
+  .hdr-team{color:var(--ink-dim);font-size:12px;letter-spacing:1px;font-family:var(--mono)}
+
+  .hdr-brand{text-align:center;margin-bottom:14px;position:relative}
+  .hdr-brand::before,.hdr-brand::after{
+    content:"";position:absolute;top:50%;width:14%;height:1px;
+    background:linear-gradient(90deg, transparent, var(--cyan-glow));
+    opacity:0.5;
+  }
+  .hdr-brand::before{left:6%;background:linear-gradient(90deg, transparent, var(--cyan-glow))}
+  .hdr-brand::after {right:6%;background:linear-gradient(270deg, transparent, var(--cyan-glow))}
+  .hdr-name{
+    font-size:56px;line-height:1.05;font-weight:200;
+    letter-spacing:14px;text-transform:uppercase;
+    background:linear-gradient(90deg, #fff 0%, var(--cyan) 50%, #fff 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 24px rgba(94,231,255,0.25));
+    margin-bottom:10px;
+  }
+  .hdr-acronym{
+    display:inline-flex;justify-content:center;align-items:center;
+    gap:16px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:15px;letter-spacing:6px;
+    text-transform:uppercase;color:var(--ink-dim);
+    padding:6px 18px;
+    border-top:1px solid var(--glass-border);
+    border-bottom:1px solid var(--glass-border);
+  }
+  .hdr-acronym b{
+    color:var(--cyan);font-weight:700;font-size:1.15em;
+    text-shadow:0 0 12px var(--cyan-glow);
+  }
+  .hdr-acronym .sep{color:var(--cyan);opacity:0.45;font-weight:300}
+
+  /* status bar */
+  .statusbar{
+    margin-top:10px;display:flex;align-items:center;gap:18px;
+    padding:8px 14px;background:rgba(0,0,0,0.25);
+    border:1px solid var(--glass-border);border-radius:10px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-dim);letter-spacing:1px;
+    overflow:hidden;position:relative;flex-wrap:wrap;
+  }
+  .statusbar::after{
+    content:"";position:absolute;left:-20%;top:0;width:25%;height:100%;
+    background:linear-gradient(90deg, transparent, rgba(94,231,255,0.08), transparent);
+    animation:sweep 6s linear infinite;
+  }
+  @keyframes sweep{0%{left:-25%}100%{left:120%}}
+  .sb-item{display:flex;align-items:center;gap:7px;text-transform:uppercase}
+  .sb-item .lbl{color:var(--ink-faint)}
+  .sb-item .val{color:var(--cyan)}
+  .sb-led{width:8px;height:8px;border-radius:50%;background:var(--ink-faint);transition:background .3s, box-shadow .3s}
+  .sb-led.ok{background:var(--green);box-shadow:0 0 8px rgba(93,220,154,0.7)}
+  .sb-led.warn{background:var(--amber);box-shadow:0 0 8px var(--amber-glow)}
+  .sb-led.err{background:var(--red);box-shadow:0 0 8px rgba(255,122,122,0.7)}
+  .sb-spacer{flex:1}
+
+  /* EMG input-source pill in the status bar (added 2026-05-22).
+     Click toggles E0/E1 over WebSocket. State always mirrors the
+     firmware -- we never optimistically update on click; we wait
+     for the server's emg_input echo. */
+  .sb-pill{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:3px 10px;border-radius:14px;
+    border:1px solid var(--glass-border);
+    background:rgba(0,0,0,0.25);
+    font-family:var(--mono);font-size:10.5px;font-weight:700;
+    letter-spacing:2px;text-transform:uppercase;
+    cursor:pointer;user-select:none;
+    transition:all .2s ease;
+  }
+  .sb-pill:hover{border-color:var(--glass-border-strong)}
+  .sb-pill .lbl{color:var(--ink-faint)}
+  .sb-pill .state{color:var(--ink-faint)}
+  .sb-pill.on{
+    background:rgba(94,231,255,0.12);
+    border-color:rgba(94,231,255,0.6);
+    box-shadow:0 0 10px rgba(94,231,255,0.25), inset 0 0 8px rgba(94,231,255,0.1);
+  }
+  .sb-pill.on .lbl   {color:var(--cyan)}
+  .sb-pill.on .state {color:var(--cyan);text-shadow:0 0 6px var(--cyan-glow)}
+  .sb-pill.off{
+    background:rgba(255,184,74,0.08);
+    border-color:rgba(255,184,74,0.45);
+  }
+  .sb-pill.off .lbl  {color:var(--amber)}
+  .sb-pill.off .state{color:var(--amber);text-shadow:0 0 6px var(--amber-glow)}
+
+  /* REFRESH CALIB pill in the status bar (added 2026-05-22). Same
+     visual language as the EMG pill so the row reads as one cluster
+     of system controls. Click triggers calibrate.run_calibration via
+     the server -- the SAME function `python python/run.py infer` uses
+     before each session, no duplicated sweep logic. */
+  .sb-pill.calib.idle{
+    /* default clickable state */
+    background:rgba(94,231,255,0.06);
+    border-color:rgba(94,231,255,0.35);
+  }
+  .sb-pill.calib.idle .lbl  {color:var(--cyan)}
+  .sb-pill.calib.idle .state{color:var(--cyan);text-shadow:0 0 6px var(--cyan-glow)}
+  .sb-pill.calib.running{
+    background:rgba(255,184,74,0.12);
+    border-color:rgba(255,184,74,0.6);
+    cursor:wait;animation:calibpulse 1.4s ease-in-out infinite;
+  }
+  .sb-pill.calib.running .lbl  {color:var(--amber)}
+  .sb-pill.calib.running .state{color:var(--amber);text-shadow:0 0 6px var(--amber-glow)}
+  .sb-pill.calib.success{
+    background:rgba(93,220,154,0.12);
+    border-color:rgba(93,220,154,0.55);
+  }
+  .sb-pill.calib.success .lbl  {color:var(--green)}
+  .sb-pill.calib.success .state{color:var(--green);text-shadow:0 0 6px rgba(93,220,154,0.6)}
+  .sb-pill.calib.fail{
+    background:rgba(255,122,122,0.12);
+    border-color:rgba(255,122,122,0.55);
+  }
+  .sb-pill.calib.fail .lbl  {color:var(--red)}
+  .sb-pill.calib.fail .state{color:var(--red);text-shadow:0 0 6px rgba(255,122,122,0.6)}
+  @keyframes calibpulse{
+    0%,100%{box-shadow:0 0 6px rgba(255,184,74,0.25), inset 0 0 6px rgba(255,184,74,0.10)}
+    50%   {box-shadow:0 0 14px rgba(255,184,74,0.55), inset 0 0 10px rgba(255,184,74,0.18)}
+  }
+
+  .divider{height:1px;background:linear-gradient(90deg, transparent, var(--glass-border-strong), transparent);margin:14px 18px 0}
+
+  /* ── MID ROW ── */
+  .mid{display:grid;grid-template-columns:1.55fr 1fr 90px;gap:14px;padding:14px 18px;min-height:420px}
+  .panel{
+    position:relative;background:var(--glass);
+    border:1px solid var(--glass-border);border-radius:14px;
+    padding:14px 16px 16px;
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);overflow:hidden;
+  }
+  .panel::before,.panel::after{
+    content:"";position:absolute;width:14px;height:14px;
+    border:1px solid var(--cyan);opacity:0.45;pointer-events:none;
+  }
+  .panel::before{top:6px;left:6px;border-right:none;border-bottom:none}
+  .panel::after{bottom:6px;right:6px;border-left:none;border-top:none}
+  .ptitle{
+    color:var(--ink);font-size:11px;font-weight:600;text-align:center;
+    margin-bottom:12px;letter-spacing:3px;text-transform:uppercase;font-family:var(--mono);
+  }
+  .ptitle::before{content:"\25E2 ";color:var(--cyan);opacity:0.8}
+  .ptitle::after {content:" \25E3";color:var(--cyan);opacity:0.8}
+
+  /* ── OBJECT ── */
+  .obj-label{
+    text-align:center;min-height:24px;margin-bottom:10px;
+    font-family:var(--mono);font-size:14px;letter-spacing:1.5px;text-transform:uppercase;
+  }
+  .obj-name{color:var(--cyan);font-weight:600;text-shadow:0 0 12px var(--cyan-glow);transition:text-shadow .3s ease}
+  .obj-name.dim{color:var(--ink-dim);text-shadow:none;font-weight:500}
+  .obj-conf{color:var(--amber);font-weight:500;font-size:12px;margin-left:10px;letter-spacing:1px}
+  .obj-conf.hidden{display:none}
+  .obj-stage{
+    position:relative;
+    background:radial-gradient(circle at 50% 45%, rgba(94,231,255,0.12), transparent 60%), rgba(0,0,0,0.35);
+    border:1px solid var(--glass-border);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    height:340px;overflow:hidden;
+  }
+  .obj-stage::before{content:"";position:absolute;inset:14px;border:1px dashed rgba(94,231,255,0.18);border-radius:8px;pointer-events:none}
+  .obj-stage svg{
+    filter:drop-shadow(0 0 14px rgba(94,231,255,0.35)) drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    animation:bob 6s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .reticle{position:absolute;width:18px;height:18px;border:1.5px solid var(--cyan);opacity:0.7;pointer-events:none}
+  .reticle.tl{top:10px;left:10px;border-right:none;border-bottom:none}
+  .reticle.tr{top:10px;right:10px;border-left:none;border-bottom:none}
+  .reticle.bl{bottom:10px;left:10px;border-right:none;border-top:none}
+  .reticle.br{bottom:10px;right:10px;border-left:none;border-top:none}
+
+  /* ── SERIAL MONITOR ── */
+  .terminal{
+    background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35));
+    border:1px solid var(--glass-border);border-radius:10px;
+    padding:10px 12px;height:338px;overflow-y:auto;
+    font-family:var(--mono);font-size:11.5px;margin-bottom:10px;
+    scroll-behavior:smooth;position:relative;
+  }
+  .terminal::-webkit-scrollbar{width:6px}
+  .terminal::-webkit-scrollbar-thumb{background:rgba(94,231,255,0.25);border-radius:3px}
+  .terminal::-webkit-scrollbar-track{background:transparent}
+  .tline{line-height:1.7;letter-spacing:0.3px;word-break:break-all}
+  .ev{color:var(--cyan);text-shadow:0 0 6px rgba(94,231,255,0.3)}
+  .dt{color:var(--ink-dim)}
+  .cm{color:var(--magenta);text-shadow:0 0 6px var(--magenta-glow)}
+  .rs{color:var(--red)}
+  .gr{color:var(--green)}
+  .serial-row{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.4);
+    border:1px solid var(--glass-border);border-radius:10px;padding:6px 10px}
+  .serial-lbl{color:var(--cyan);font-size:11px;font-weight:600;font-family:var(--mono);
+    letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+  .serial-lbl::before{content:"\203A "; opacity:0.7}
+  .serial-in{flex:1;background:transparent;border:none;color:var(--amber);
+    font-family:var(--mono);font-size:12.5px;outline:none;letter-spacing:1px;caret-color:var(--cyan)}
+  .serial-in::placeholder{color:var(--ink-faint)}
+
+  /* ── MODE ── */
+  .mode-panel{padding:14px 6px 16px;display:flex;flex-direction:column}
+  .modes-wrap{display:flex;flex-direction:column;gap:10px;align-items:center;flex:1;justify-content:center;padding:6px 0}
+  .mitem{
+    writing-mode:vertical-lr;text-orientation:mixed;transform:rotate(180deg);
+    color:var(--ink-faint);font-size:12.5px;font-weight:500;letter-spacing:3px;
+    text-transform:uppercase;font-family:var(--mono);padding:8px 4px;
+    border-left:2px solid transparent;transition:all .3s ease;
+    user-select:none;opacity:0.5;position:relative;cursor:pointer;
+  }
+  .mitem:hover:not(.active):not(.disabled){
+    color:var(--ink);opacity:0.85;border-left-color:rgba(94,231,255,0.4);
+  }
+  .mitem.disabled{
+    cursor:not-allowed;opacity:0.25;
+  }
+  .mitem.disabled:hover{
+    color:var(--ink-faint);opacity:0.25;border-left-color:transparent;
+  }
+  .mitem.active{
+    color:var(--cyan);opacity:1;font-weight:700;border-left-color:var(--cyan);
+    text-shadow:0 0 10px var(--cyan-glow);animation:modepulse 2.4s ease-in-out infinite;
+  }
+  .mitem.active::before{
+    content:"";position:absolute;left:-2px;top:0;bottom:0;width:2px;
+    background:var(--cyan);box-shadow:0 0 12px var(--cyan-glow);
+  }
+  @keyframes modepulse{
+    0%,100%{text-shadow:0 0 10px var(--cyan-glow)}
+    50%   {text-shadow:0 0 18px var(--cyan-glow), 0 0 28px var(--cyan-glow)}
+  }
+
+  /* ── EMG ── */
+  .emg-section{
+    margin:0 18px 18px;padding:14px 16px 16px;background:var(--glass);
+    border:1px solid var(--glass-border);border-radius:14px;
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);overflow:hidden;
+  }
+  .emg-section::before,.emg-section::after{
+    content:"";position:absolute;width:14px;height:14px;border:1px solid var(--cyan);opacity:0.45;pointer-events:none;
+  }
+  .emg-section::before{top:6px;left:6px;border-right:none;border-bottom:none}
+  .emg-section::after{bottom:6px;right:6px;border-left:none;border-top:none}
+
+  .emg-header{display:flex;align-items:center;gap:24px;margin-bottom:10px;flex-wrap:wrap}
+  .emg-title{
+    color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:600;
+    letter-spacing:3px;text-transform:uppercase;padding-right:18px;
+    border-right:1px solid var(--glass-border);margin-right:6px;
+  }
+  .emg-title::before{content:"\25E2 ";color:var(--cyan);opacity:0.8}
+  .emg-title::after {content:" \25E3";color:var(--cyan);opacity:0.8}
+  .emg-meta{display:flex;align-items:center;gap:22px;font-size:11.5px;font-family:var(--mono);letter-spacing:1px;flex:1;flex-wrap:wrap}
+  .emg-meta .lbl{color:var(--ink-faint);text-transform:uppercase;margin-right:4px}
+  .emg-val .num{color:var(--cyan);font-weight:600;text-shadow:0 0 6px rgba(94,231,255,0.3)}
+  .emg-thr .num{color:var(--magenta);font-weight:600;text-shadow:0 0 6px var(--magenta-glow)}
+  .emg-status{
+    margin-left:auto;padding:4px 14px;border-radius:20px;font-size:10.5px;font-weight:700;
+    font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;
+    border:1px solid transparent;transition:all .2s ease;
+  }
+  .emg-status.above{background:rgba(255,94,196,0.12);color:var(--magenta);border-color:var(--magenta);
+    box-shadow:0 0 14px var(--magenta-glow), inset 0 0 10px rgba(255,94,196,0.15)}
+  .emg-status.below{background:rgba(94,231,255,0.08);color:var(--cyan);border-color:rgba(94,231,255,0.5)}
+  #emgCanvas{display:block;width:100%;height:180px;border-radius:10px;
+    border:1px solid var(--glass-border);background:rgba(0,0,0,0.45)}
+</style>
+</head>
+<body>
+<div class="outer">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-meta">
+      <span class="hdr-code"><span class="dot"></span>Project Code &middot; ME-21-MALI-009</span>
+      <span class="hdr-team">Peter Han &middot; Ben Killham-Walter &middot; Regina Li</span>
+    </div>
+    <div class="hdr-brand">
+      <div class="hdr-name">MARS Hand</div>
+      <div class="hdr-acronym">
+        <span><b>M</b>agnetic</span>
+        <span class="sep">&middot;</span>
+        <span><b>A</b>I-enabled</span>
+        <span class="sep">&middot;</span>
+        <span><b>R</b>ecognition</span>
+        <span class="sep">&middot;</span>
+        <span><b>S</b>ystem</span>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span class="sb-item"><span class="sb-led" id="ledXiao"></span><span class="lbl">XIAO</span><span class="val" id="xiaoPort">—</span></span>
+      <span class="sb-item"><span class="sb-led" id="ledOrb"></span><span class="lbl">OPENRB</span><span class="val" id="orbPort">—</span></span>
+      <span class="sb-item"><span class="lbl">SENSORS</span><span class="val" id="sensorsVal">—</span></span>
+      <span class="sb-item"><span class="lbl">MODEL</span><span class="val" id="modelState">—</span></span>
+      <span class="sb-spacer"></span>
+      <!-- EMG input-source pill. Off = manual-trigger mode (default).
+           Click toggles. Double-press on the physical button still
+           triggers actuation in either state. -->
+      <span class="sb-pill off" id="emgPill" title="Toggle EMG-triggered actuation. Double-press the button to actuate manually in either state.">
+        <span class="lbl">EMG</span><span class="state" id="emgPillState">OFF</span>
+      </span>
+      <!-- REFRESH CALIB pill. Click runs calibrate.run_calibration on
+           the server (the same function `python python/run.py infer`
+           runs before its inference session). Hand must be EMPTY when
+           clicked. Stale calibration is the most common cause of low
+           OBJ_RECOG confidence in the UI. -->
+      <span class="sb-pill calib idle" id="calibPill" title="Refresh motor-field calibration. Hand must be EMPTY before clicking. Sweep takes about 10 seconds. A stale calibration is the most common cause of low OBJ_RECOG confidence in the UI vs. python run.py infer.">
+        <span class="lbl">CALIB</span><span class="state" id="calibPillState">REFRESH</span>
+      </span>
+      <span class="sb-item"><span class="lbl">UPTIME</span><span class="val" id="uptimeVal">00:00:00</span></span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MID ROW -->
+  <div class="mid">
+
+    <!-- OBJECT DETECTED -->
+    <div class="panel">
+      <p class="ptitle">Object Detected</p>
+      <p class="obj-label">
+        <span class="obj-name dim" id="objName">waiting for next object</span>
+        <span class="obj-conf hidden" id="objConfWrap">confidence <span id="objConf">0</span>%</span>
+      </p>
+      <div class="obj-stage">
+        <span class="reticle tl"></span>
+        <span class="reticle tr"></span>
+        <span class="reticle bl"></span>
+        <span class="reticle br"></span>
+        <svg id="objSvg" viewBox="0 0 130 130" width="290" height="290" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <!-- SERIAL MONITOR -->
+    <div class="panel">
+      <p class="ptitle">Serial Monitor</p>
+      <div class="terminal" id="terminal"></div>
+      <div class="serial-row">
+        <span class="serial-lbl">cmd</span>
+        <input class="serial-in" id="serialIn" placeholder="g &middot; h &middot; r &middot; m2 &middot; w90 &middot; t &middot; a" autocomplete="off" spellcheck="false"/>
+      </div>
+    </div>
+
+    <!-- MODE -->
+    <div class="panel mode-panel">
+      <p class="ptitle">Mode</p>
+      <div class="modes-wrap" id="modesWrap"></div>
+    </div>
+
+  </div>
+
+  <!-- EMG -->
+  <div class="emg-section">
+    <div class="emg-header">
+      <span class="emg-title">EMG</span>
+      <div class="emg-meta">
+        <span class="emg-thr"><span class="lbl">Threshold</span><span class="num" id="thrNum">0</span></span>
+        <span class="emg-val"><span class="lbl">Smoothed</span><span class="num" id="smoothNum">0</span></span>
+        <span class="emg-status below" id="emgStatus">Below</span>
+      </div>
+    </div>
+    <canvas id="emgCanvas"></canvas>
+  </div>
+
+</div>
+
+<script>
+// =============================================================
+// MARS UI — live client driven by python/server.py over WebSocket
+// =============================================================
+
+// ─── Object SVGs ─────────────────────────────────────────────
+// Stylised representations of the 3D-printed demo objects.
+// Stiff = black PLA, sharp edges, cyan rim lighting.
+// Soft  = white TPU, gentle gradients, blue-tinted highlights.
+// Layer lines, infill ellipses, floor shadows, and specular
+// stripes are deliberate "3D-printed look" cues.
+
+// Helper: build N horizontal layer lines between y1..y2 across x1..x2.
+function layerLines(x1, x2, y1, y2, step, color, width){
+  let out = '';
+  for (let y = y1; y <= y2; y += step){
+    out += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="${width}"/>`;
+  }
+  return out;
+}
+
+function svgStiffCube(){return `
+  <defs>
+    <linearGradient id="bc-top" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%"   stop-color="#4a5466"/>
+      <stop offset="55%"  stop-color="#1f2731"/>
+      <stop offset="100%" stop-color="#0c1118"/>
+    </linearGradient>
+    <linearGradient id="bc-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#1a2029"/>
+      <stop offset="100%" stop-color="#070a0e"/>
+    </linearGradient>
+    <linearGradient id="bc-right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#2c3340"/>
+      <stop offset="100%" stop-color="#0e1218"/>
+    </linearGradient>
+    <pattern id="bc-l" patternUnits="userSpaceOnUse"
+             width="50" height="3" patternTransform="rotate(27.5)">
+      <line x1="0" y1="0" x2="50" y2="0" stroke="rgba(94,231,255,0.10)" stroke-width="0.35"/>
+    </pattern>
+    <pattern id="bc-r" patternUnits="userSpaceOnUse"
+             width="50" height="3" patternTransform="rotate(-27.5)">
+      <line x1="0" y1="0" x2="50" y2="0" stroke="rgba(94,231,255,0.07)" stroke-width="0.35"/>
+    </pattern>
+  </defs>
+  <!-- floor shadow + cyan kicker -->
+  <ellipse cx="65" cy="124" rx="58" ry="7" fill="rgba(0,0,0,0.55)"/>
+  <ellipse cx="65" cy="124" rx="58" ry="7" fill="rgba(94,231,255,0.06)"/>
+  <!-- top face -->
+  <polygon points="65,10 116,38 65,66 14,38" fill="url(#bc-top)"
+           stroke="rgba(94,231,255,0.45)" stroke-width="0.6"/>
+  <!-- right face + layer pattern -->
+  <polygon points="116,38 65,66 65,118 116,90" fill="url(#bc-right)" stroke="#000" stroke-width="0.3"/>
+  <polygon points="116,38 65,66 65,118 116,90" fill="url(#bc-r)"/>
+  <!-- left face + layer pattern -->
+  <polygon points="14,38 65,66 65,118 14,90" fill="url(#bc-left)" stroke="#000" stroke-width="0.3"/>
+  <polygon points="14,38 65,66 65,118 14,90" fill="url(#bc-l)"/>
+  <!-- cyan edge highlights -->
+  <line x1="14"  y1="38" x2="65"  y2="66" stroke="rgba(94,231,255,0.5)"  stroke-width="0.7"/>
+  <line x1="116" y1="38" x2="65"  y2="66" stroke="rgba(94,231,255,0.3)"  stroke-width="0.6"/>
+  <line x1="65"  y1="66" x2="65"  y2="118" stroke="rgba(94,231,255,0.22)" stroke-width="0.5"/>
+  <!-- specular sheen on top -->
+  <polygon points="65,16 95,32 65,48 35,32" fill="rgba(255,255,255,0.06)"/>
+`;}
+
+function svgStiffCylinder(){return `
+  <defs>
+    <linearGradient id="bcy-body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#10141a"/>
+      <stop offset="30%"  stop-color="#2a3340"/>
+      <stop offset="55%"  stop-color="#3c4756"/>
+      <stop offset="75%"  stop-color="#1f2731"/>
+      <stop offset="100%" stop-color="#080b10"/>
+    </linearGradient>
+    <linearGradient id="bcy-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#3e4856"/>
+      <stop offset="100%" stop-color="#1c232c"/>
+    </linearGradient>
+  </defs>
+  <!-- floor shadow -->
+  <ellipse cx="65" cy="124" rx="50" ry="6" fill="rgba(0,0,0,0.55)"/>
+  <ellipse cx="65" cy="124" rx="50" ry="6" fill="rgba(94,231,255,0.06)"/>
+  <!-- bottom rim shadow -->
+  <ellipse cx="65" cy="114" rx="43" ry="13" fill="#080b10"/>
+  <!-- body -->
+  <rect x="22" y="30" width="86" height="84" fill="url(#bcy-body)"/>
+  <!-- layer lines -->
+  <g>${layerLines(22, 108, 36, 110, 4, 'rgba(94,231,255,0.08)', 0.35)}</g>
+  <!-- specular highlight stripes -->
+  <rect x="55" y="30" width="3" height="84" fill="rgba(94,231,255,0.10)"/>
+  <rect x="59" y="30" width="2" height="84" fill="rgba(255,255,255,0.06)"/>
+  <!-- side dark edges -->
+  <line x1="22"  y1="30" x2="22"  y2="114" stroke="rgba(0,0,0,0.85)" stroke-width="0.6"/>
+  <line x1="108" y1="30" x2="108" y2="114" stroke="rgba(0,0,0,0.85)" stroke-width="0.6"/>
+  <!-- top ellipse (rim) -->
+  <ellipse cx="65" cy="30" rx="43" ry="13" fill="url(#bcy-top)"
+           stroke="rgba(94,231,255,0.55)" stroke-width="0.7"/>
+  <!-- printed infill suggestion (concentric ellipses) -->
+  <ellipse cx="65" cy="30" rx="36" ry="10.5" fill="none" stroke="rgba(94,231,255,0.18)" stroke-width="0.4"/>
+  <ellipse cx="65" cy="30" rx="28" ry="8"    fill="none" stroke="rgba(94,231,255,0.12)" stroke-width="0.35"/>
+  <ellipse cx="65" cy="30" rx="18" ry="5"    fill="none" stroke="rgba(94,231,255,0.09)" stroke-width="0.3"/>
+  <ellipse cx="65" cy="30" rx="8"  ry="2.3"  fill="none" stroke="rgba(94,231,255,0.07)" stroke-width="0.3"/>
+`;}
+
+function svgSoftCube(){return `
+  <defs>
+    <linearGradient id="sok-top" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%"   stop-color="#f8fbff"/>
+      <stop offset="60%"  stop-color="#d8e2ef"/>
+      <stop offset="100%" stop-color="#aab9cf"/>
+    </linearGradient>
+    <linearGradient id="sok-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#a8b6c8"/>
+      <stop offset="100%" stop-color="#7a8aa0"/>
+    </linearGradient>
+    <linearGradient id="sok-right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#dde5f0"/>
+      <stop offset="100%" stop-color="#a4b2c6"/>
+    </linearGradient>
+    <pattern id="sok-l" patternUnits="userSpaceOnUse"
+             width="50" height="3.5" patternTransform="rotate(27.5)">
+      <line x1="0" y1="0" x2="50" y2="0" stroke="rgba(120,140,170,0.22)" stroke-width="0.3"/>
+    </pattern>
+    <pattern id="sok-r" patternUnits="userSpaceOnUse"
+             width="50" height="3.5" patternTransform="rotate(-27.5)">
+      <line x1="0" y1="0" x2="50" y2="0" stroke="rgba(120,140,170,0.16)" stroke-width="0.3"/>
+    </pattern>
+  </defs>
+  <!-- soft, wider shadow -->
+  <ellipse cx="65" cy="125" rx="60" ry="6" fill="rgba(0,0,0,0.42)"/>
+  <ellipse cx="65" cy="125" rx="60" ry="6" fill="rgba(94,231,255,0.05)"/>
+  <!-- top face -->
+  <polygon points="65,12 115,38 65,64 15,38" fill="url(#sok-top)"
+           stroke="#9aaac0" stroke-width="0.7"/>
+  <!-- right face + layer pattern -->
+  <polygon points="115,38 65,64 65,116 115,90" fill="url(#sok-right)" stroke="#9aaac0" stroke-width="0.5"/>
+  <polygon points="115,38 65,64 65,116 115,90" fill="url(#sok-r)"/>
+  <!-- left face + layer pattern -->
+  <polygon points="15,38 65,64 65,116 15,90" fill="url(#sok-left)" stroke="#7a8aa0" stroke-width="0.5"/>
+  <polygon points="15,38 65,64 65,116 15,90" fill="url(#sok-l)"/>
+  <!-- bright rim highlight along the top edges -->
+  <polyline points="15,38 65,12 115,38" fill="none"
+            stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/>
+  <line x1="65" y1="64" x2="65" y2="116" stroke="rgba(180,200,225,0.55)" stroke-width="0.4"/>
+  <!-- specular sheen on top -->
+  <polygon points="65,16 92,30 65,44 38,30" fill="rgba(255,255,255,0.18)"/>
+`;}
+
+function svgSoftCylinder(){return `
+  <defs>
+    <linearGradient id="soky-body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9aaac0"/>
+      <stop offset="30%"  stop-color="#d8e0ec"/>
+      <stop offset="55%"  stop-color="#f0f4fa"/>
+      <stop offset="75%"  stop-color="#c8d2e0"/>
+      <stop offset="100%" stop-color="#8b9bb4"/>
+    </linearGradient>
+    <linearGradient id="soky-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#c4d0e0"/>
+    </linearGradient>
+  </defs>
+  <!-- floor shadow -->
+  <ellipse cx="65" cy="125" rx="52" ry="6" fill="rgba(0,0,0,0.40)"/>
+  <ellipse cx="65" cy="125" rx="52" ry="6" fill="rgba(94,231,255,0.05)"/>
+  <!-- bottom rim shadow -->
+  <ellipse cx="65" cy="114" rx="43" ry="13" fill="#8b9bb4"/>
+  <!-- body -->
+  <rect x="22" y="30" width="86" height="84" fill="url(#soky-body)"/>
+  <!-- layer lines -->
+  <g>${layerLines(22, 108, 36, 110, 4, 'rgba(140,160,190,0.28)', 0.3)}</g>
+  <!-- specular highlight stripes (brighter than stiff) -->
+  <rect x="58" y="30" width="3" height="84" fill="rgba(255,255,255,0.40)"/>
+  <rect x="62" y="30" width="2" height="84" fill="rgba(255,255,255,0.22)"/>
+  <!-- side dark edges -->
+  <line x1="22"  y1="30" x2="22"  y2="114" stroke="rgba(122,138,160,0.85)" stroke-width="0.6"/>
+  <line x1="108" y1="30" x2="108" y2="114" stroke="rgba(122,138,160,0.85)" stroke-width="0.6"/>
+  <!-- top ellipse -->
+  <ellipse cx="65" cy="30" rx="43" ry="13" fill="url(#soky-top)"
+           stroke="#9aaac0" stroke-width="0.7"/>
+  <!-- infill rings -->
+  <ellipse cx="65" cy="30" rx="36" ry="10.5" fill="none" stroke="rgba(120,140,170,0.24)" stroke-width="0.4"/>
+  <ellipse cx="65" cy="30" rx="28" ry="8"    fill="none" stroke="rgba(120,140,170,0.18)" stroke-width="0.35"/>
+  <ellipse cx="65" cy="30" rx="18" ry="5"    fill="none" stroke="rgba(120,140,170,0.14)" stroke-width="0.3"/>
+  <ellipse cx="65" cy="30" rx="8"  ry="2.3"  fill="none" stroke="rgba(120,140,170,0.10)" stroke-width="0.3"/>
+`;}
+
+function svgNoObject(){return `
+  <g fill="none" stroke="#5a7090" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.6">
+    <circle cx="65" cy="64" r="40"/>
+  </g>
+  <text x="65" y="69" text-anchor="middle" fill="#5a7090"
+        font-family="JetBrains Mono, monospace" font-size="11" letter-spacing="2">— EMPTY —</text>`;}
+
+function svgWaiting(){return `
+  <g fill="none" stroke="#5a7090" stroke-width="1.3" stroke-dasharray="2 4" opacity="0.45">
+    <circle cx="65" cy="64" r="46"/>
+  </g>
+  <text x="65" y="69" text-anchor="middle" fill="#5a7090"
+        font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="3">STAND BY</text>`;}
+
+function svgClassifying(){return `
+  <g fill="none" stroke="#5ee7ff" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.85">
+    <circle cx="65" cy="64" r="42">
+      <animateTransform attributeName="transform" type="rotate"
+        from="0 65 64" to="360 65 64" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <text x="65" y="69" text-anchor="middle" fill="#5ee7ff"
+        font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="3">SCANNING</text>`;}
+
+const svgMap = {
+  stiff_cube:     svgStiffCube,
+  stiff_cylinder: svgStiffCylinder,
+  soft_cube:      svgSoftCube,
+  soft_cylinder:  svgSoftCylinder,
+  no_object:      svgNoObject,
+  waiting:        svgWaiting,
+  classifying:    svgClassifying,
+};
+
+// ─── DOM refs ─────────────────────────────────────────────────
+const objSvg    = document.getElementById('objSvg');
+const objName   = document.getElementById('objName');
+const objConf   = document.getElementById('objConf');
+const objConfWrap = document.getElementById('objConfWrap');
+const modesWrap = document.getElementById('modesWrap');
+const terminal  = document.getElementById('terminal');
+const serialIn  = document.getElementById('serialIn');
+const xiaoPort  = document.getElementById('xiaoPort');
+const orbPort   = document.getElementById('orbPort');
+const ledXiao   = document.getElementById('ledXiao');
+const ledOrb    = document.getElementById('ledOrb');
+const modelState= document.getElementById('modelState');
+const sensorsVal= document.getElementById('sensorsVal');
+const uptimeVal = document.getElementById('uptimeVal');
+const thrNum    = document.getElementById('thrNum');
+const smoothNum = document.getElementById('smoothNum');
+const emgStatus = document.getElementById('emgStatus');
+const emgPill      = document.getElementById('emgPill');
+const emgPillState = document.getElementById('emgPillState');
+
+// EMG-triggered actuation state. Mirrors firmware (single source of
+// truth) -- we never update this from the click handler; the click
+// only sends E0/E1 and we wait for the server's emg_input echo.
+let emgEnabled = false;
+
+function setEmgPill(enabled){
+  emgEnabled = !!enabled;
+  emgPill.classList.toggle('on',  emgEnabled);
+  emgPill.classList.toggle('off', !emgEnabled);
+  emgPillState.textContent = emgEnabled ? 'ON' : 'OFF';
+}
+setEmgPill(false);
+
+emgPill.addEventListener('click', () => {
+  if (!ws || ws.readyState !== WebSocket.OPEN){
+    addLine('# ERROR not connected to server', 'rs');
+    return;
+  }
+  // Send the OPPOSITE of the current mirrored state. Firmware will
+  // echo # EMG_INPUT <n> and the server will broadcast emg_input;
+  // that's what actually flips the pill.
+  ws.send(JSON.stringify({ type:'emg_input', enabled: !emgEnabled }));
+});
+
+// ─── REFRESH CALIB pill ──────────────────────────────────────────
+const calibPill      = document.getElementById('calibPill');
+const calibPillState = document.getElementById('calibPillState');
+
+// Track whether a sweep is in flight to ignore repeat clicks. The
+// authoritative state still comes from the server's calib_status
+// broadcast; this is just for click-debounce.
+let calibInFlight = false;
+let calibFlashTimer = null;
+
+function setCalibPill(stateName, note){
+  // stateName in {'idle','running','success','fail'}
+  clearTimeout(calibFlashTimer);
+  calibPill.classList.remove('idle','running','success','fail');
+  calibPill.classList.add(stateName);
+  if (stateName === 'running'){
+    calibInFlight = true;
+    calibPillState.textContent = 'SWEEPING';
+    calibPill.title = (note || 'Sweeping motor 1; hand must be EMPTY.');
+  } else if (stateName === 'success'){
+    calibInFlight = false;
+    calibPillState.textContent = 'OK';
+    calibPill.title = (note || 'Calibration refreshed.');
+    // Flash green briefly, then return to clickable idle.
+    calibFlashTimer = setTimeout(() => setCalibPill('idle'), 4000);
+  } else if (stateName === 'fail'){
+    calibInFlight = false;
+    calibPillState.textContent = 'FAIL';
+    calibPill.title = (note || 'Calibration failed. See monitor.');
+    if (note) addLine('# CALIB FAIL ' + note, 'rs');
+    calibFlashTimer = setTimeout(() => setCalibPill('idle'), 6000);
+  } else {
+    // idle
+    calibInFlight = false;
+    calibPillState.textContent = 'REFRESH';
+    calibPill.title = 'Refresh motor-field calibration. Hand must be EMPTY before clicking. Sweep takes about 10 seconds.';
+  }
+}
+setCalibPill('idle');
+
+calibPill.addEventListener('click', () => {
+  if (calibInFlight) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN){
+    addLine('# ERROR not connected to server', 'rs');
+    return;
+  }
+  ws.send(JSON.stringify({ type:'calibrate' }));
+});
+
+// ─── Constants ────────────────────────────────────────────────
+const RESULT_HOLD_MS = 7000;
+const MODES = ['power','tripod','object','rotate'];
+
+// Mode column. Each entry is clickable -- click sends "m<idx>" via
+// the same serial pass-through used by the cmd input, so the firmware
+// runs its switchMode() exactly as if the user had cycled with the
+// physical button. Index 3 (SCREWING) is grayed when firmware reports
+// SCREWING_ENABLED=0 and the click handler no-ops.
+let screwingEnabled = true;
+
+MODES.forEach((m, idx) => {
+  const el = document.createElement('div');
+  el.className = 'mitem';
+  el.dataset.idx = idx;
+  el.textContent = m;
+  el.addEventListener('click', () => {
+    if (el.classList.contains('disabled')) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN){
+      addLine('# ERROR not connected to server', 'rs');
+      return;
+    }
+    ws.send(JSON.stringify({ type:'serial', cmd:'m'+idx }));
+  });
+  modesWrap.appendChild(el);
+});
+
+function setScrewingEnabled(enabled){
+  screwingEnabled = !!enabled;
+  const el = modesWrap.querySelector('.mitem[data-idx="3"]');
+  if (el) el.classList.toggle('disabled', !screwingEnabled);
+}
+
+// ─── Object panel state machine ───────────────────────────────
+let resultTimer = null;
+
+function setObjectState(state, payload){
+  // state: 'waiting' | 'classifying' | 'no_object' | <real ui_id>
+  clearTimeout(resultTimer);
+  objSvg.innerHTML = (svgMap[state] || svgMap.waiting)();
+
+  if (state === 'waiting'){
+    objName.textContent = 'waiting for next object';
+    objName.classList.add('dim');
+    objConfWrap.classList.add('hidden');
+    return;
+  }
+  if (state === 'classifying'){
+    objName.textContent = 'classifying...';
+    objName.classList.remove('dim');
+    objConfWrap.classList.add('hidden');
+    return;
+  }
+  if (state === 'no_object'){
+    objName.textContent = payload && payload.label ? payload.label : 'no object detected';
+    objName.classList.remove('dim');
+    if (payload && typeof payload.confidence === 'number'){
+      objConf.textContent = payload.confidence.toFixed ? payload.confidence.toFixed(1) : payload.confidence;
+      objConfWrap.classList.remove('hidden');
+    } else {
+      objConfWrap.classList.add('hidden');
+    }
+    resultTimer = setTimeout(()=>setObjectState('waiting'), RESULT_HOLD_MS);
+    return;
+  }
+  // Real object class
+  objName.textContent = payload.label;
+  objName.classList.remove('dim');
+  objConf.textContent = payload.confidence.toFixed
+    ? payload.confidence.toFixed(1) : payload.confidence;
+  objConfWrap.classList.remove('hidden');
+  // brief glow pulse on update
+  objName.style.transition = 'none';
+  objName.style.textShadow = '0 0 24px var(--cyan-glow), 0 0 36px var(--cyan-glow)';
+  setTimeout(()=>{
+    objName.style.transition = 'text-shadow .8s ease';
+    objName.style.textShadow = '0 0 12px var(--cyan-glow)';
+  }, 60);
+  resultTimer = setTimeout(()=>setObjectState('waiting'), RESULT_HOLD_MS);
+}
+setObjectState('waiting');
+
+// ─── Mode column (display only) ───────────────────────────────
+function setCurrentMode(ui_name){
+  const idx = MODES.indexOf(ui_name);
+  modesWrap.querySelectorAll('.mitem').forEach((el,j)=>el.classList.toggle('active', j===idx));
+}
+
+function setSensors(present, total){
+  sensorsVal.textContent = `${present}/${total}`;
+  sensorsVal.style.color = (present >= total) ? '' :
+                            (present > 0)     ? 'var(--amber)' : 'var(--red)';
+}
+
+// ─── Serial monitor ───────────────────────────────────────────
+const MAX_LINES = 200;
+function addLine(text, cls){
+  const div = document.createElement('div');
+  div.className = 'tline ' + (cls || 'dt');
+  div.textContent = text;
+  terminal.appendChild(div);
+  while (terminal.childNodes.length > MAX_LINES){
+    terminal.removeChild(terminal.firstChild);
+  }
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+// ─── Serial input → server ────────────────────────────────────
+serialIn.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && serialIn.value.trim()){
+    const cmd = serialIn.value.trim();
+    if (ws && ws.readyState === WebSocket.OPEN){
+      ws.send(JSON.stringify({ type:'serial', cmd: cmd }));
+    } else {
+      addLine('# ERROR not connected to server', 'rs');
+    }
+    serialIn.value = '';
+  }
+});
+
+// ─── Status bar uptime (display only; server pushes too) ──────
+function fmtUptime(s){
+  const hh = String(Math.floor(s/3600)).padStart(2,'0');
+  const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+// ─── EMG canvas ───────────────────────────────────────────────
+const canvas    = document.getElementById('emgCanvas');
+const ctx       = canvas.getContext('2d');
+let THRESHOLD   = 0;
+let emgHistory  = new Array(600).fill(0);
+
+function resizeCanvas(){
+  canvas.width  = canvas.offsetWidth  * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function pushEMG(smoothed, threshold){
+  THRESHOLD = threshold;
+  emgHistory.push(Math.max(0, Math.min(255, smoothed)));
+  if (emgHistory.length > 600) emgHistory.shift();
+  thrNum.textContent    = threshold;
+  smoothNum.textContent = smoothed;
+  const above = smoothed >= threshold;
+  emgStatus.textContent = above ? 'Above' : 'Below';
+  emgStatus.className   = 'emg-status ' + (above ? 'above' : 'below');
+}
+
+function drawEMG(){
+  const W = canvas.width;
+  const H = canvas.height;
+  const dpr = window.devicePixelRatio || 1;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0, 'rgba(10,16,26,0.6)');
+  bgGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(94,231,255,0.08)';
+  ctx.lineWidth = dpr;
+  for (let i=0;i<=4;i++){ const y=(H/4)*i; ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+  for (let i=0;i<=10;i++){ const x=(W/10)*i; ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+
+  const thrY = H - (THRESHOLD/255)*H;
+  ctx.strokeStyle = 'rgba(255,94,196,0.85)';
+  ctx.lineWidth   = 1.5*dpr;
+  ctx.setLineDash([8*dpr, 4*dpr]);
+  ctx.beginPath();ctx.moveTo(0,thrY);ctx.lineTo(W,thrY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,94,196,0.9)';
+  ctx.font = `${10*dpr}px JetBrains Mono, Courier New`;
+  ctx.fillText('THRESHOLD', W-92*dpr, thrY-6*dpr);
+
+  const step = W / emgHistory.length;
+
+  const fillGrad = ctx.createLinearGradient(0,0,0,H);
+  fillGrad.addColorStop(0, 'rgba(94,231,255,0.32)');
+  fillGrad.addColorStop(1, 'rgba(94,231,255,0.0)');
+  ctx.fillStyle = fillGrad;
+  ctx.beginPath();
+  ctx.moveTo(0,H);
+  emgHistory.forEach((v,i)=>{
+    const x = i*step;
+    const y = H - (v/255)*H;
+    ctx.lineTo(x,y);
+  });
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+
+  ctx.shadowColor = 'rgba(94,231,255,0.7)';
+  ctx.shadowBlur  = 12*dpr;
+  ctx.strokeStyle = '#5ee7ff';
+  ctx.lineWidth   = 1.8*dpr;
+  ctx.beginPath();
+  emgHistory.forEach((v,i)=>{
+    const x = i*step;
+    const y = H - (v/255)*H;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(138,163,196,0.55)';
+  ctx.font = `${9*dpr}px JetBrains Mono, Courier New`;
+  ctx.fillText('255', 6*dpr, 13*dpr);
+  ctx.fillText('128', 6*dpr, H/2+4*dpr);
+  ctx.fillText('0',   6*dpr, H-4*dpr);
+
+  requestAnimationFrame(drawEMG);
+}
+requestAnimationFrame(drawEMG);
+
+// ─── WebSocket ────────────────────────────────────────────────
+let ws = null;
+let reconnectDelay = 500;
+
+function connect(){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+  ws.addEventListener('open', () => {
+    addLine('# CONNECTED to server', 'gr');
+    reconnectDelay = 500;
+  });
+  ws.addEventListener('close', () => {
+    addLine('# DISCONNECTED from server (reconnecting...)', 'rs');
+    ledXiao.className = 'sb-led err';
+    ledOrb.className  = 'sb-led err';
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 1.8, 5000);
+  });
+  ws.addEventListener('message', ev => {
+    let m;
+    try { m = JSON.parse(ev.data); } catch { return; }
+    handleMessage(m);
+  });
+}
+
+function handleMessage(m){
+  switch (m.type){
+    case 'status':
+      xiaoPort.textContent  = m.xiao_port || '—';
+      orbPort.textContent   = m.openrb_port || '—';
+      ledXiao.className     = 'sb-led ' + (m.xiao_ok ? 'ok' : 'err');
+      ledOrb.className      = 'sb-led ' + (m.openrb_ok ? 'ok' : 'err');
+      modelState.textContent= m.model_ready ? 'READY' : 'MISSING';
+      modelState.style.color= m.model_ready ? '' : 'var(--amber)';
+      if (typeof m.sensors_present === 'number'){
+        setSensors(m.sensors_present, m.sensors_total || 4);
+      }
+      setCurrentMode(m.mode_ui);
+      if (typeof m.emg_enabled === 'boolean'){
+        setEmgPill(m.emg_enabled);
+      }
+      // If a calibration is already in progress when this client
+      // joined, the server's status snapshot tells us so. Reflect it.
+      if (m.in_calibration){
+        setCalibPill('running');
+      }
+      if (typeof m.screwing_enabled === 'boolean'){
+        setScrewingEnabled(m.screwing_enabled);
+      }
+      uptimeVal.textContent = fmtUptime(m.uptime_s || 0);
+      break;
+
+    case 'emg_input':
+      setEmgPill(!!m.enabled);
+      break;
+
+    case 'calib_status':
+      setCalibPill(m.state || 'idle', m.note);
+      break;
+
+    case 'screwing_enabled':
+      setScrewingEnabled(!!m.enabled);
+      break;
+
+    case 'sensors':
+      setSensors(m.present, m.total);
+      break;
+
+    case 'uptime':
+      uptimeVal.textContent = fmtUptime(m.uptime_s);
+      break;
+
+    case 'mode':
+      setCurrentMode(m.ui_name);
+      addLine(`# MODE ${m.n} ${m.name}`, 'ev');
+      break;
+
+    case 'emg':
+      pushEMG(m.smoothed, m.threshold);
+      break;
+
+    case 'event':
+      addLine(m.raw, classifyEvent(m.name));
+      break;
+
+    case 'command_echo':
+      addLine('> ' + m.cmd, 'cm');
+      break;
+
+    case 'classifying':
+      setObjectState('classifying');
+      break;
+
+    case 'result':
+      if (m.ui_id === 'no_object'){
+        setObjectState('no_object', { label: m.label, confidence: m.confidence });
+      } else {
+        setObjectState(m.ui_id, { label: m.label, confidence: m.confidence });
+      }
+      // also drop a result line into the serial monitor
+      const detail = (m.confidence !== undefined) ? ` (${m.confidence}%)` : '';
+      const note = m.note ? `  note=${m.note}` : '';
+      addLine(`# RESULT ${m.label}${detail}${note}`, 'gr');
+      break;
+
+    default:
+      // ignore unknown types
+  }
+}
+
+function classifyEvent(name){
+  if (name === 'ERROR' || name === 'GRASP_TIMEOUT' || name === 'ABORTED'
+      || name === 'CALIB_ABORTED') return 'rs';
+  if (name === 'WARN' || name === 'M2_STALL' || name === 'FORCE_STOP') return 'cm';
+  return 'ev';
+}
+
+connect();
+</script>
+</body>
+</html>
